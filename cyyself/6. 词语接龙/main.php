@@ -20,7 +20,7 @@
 		$ret = array();
 		foreach ($html->find('a[class=\'green\']') as $element) {
 			$tmp = strip_tags($element->plaintext);
-			if (mb_substr($tmp,0,1) == $char) array_push($ret,$tmp);
+			if (mb_substr($tmp,0,1) == $char && mb_strlen($tmp) == 4) array_push($ret,$tmp);
 		}
 		if (count($ret) == 0) return false;
 		return $ret;
@@ -29,7 +29,7 @@
 	while (1) {
 		echo ">";
 		$cur = trim(fgets(STDIN));
-		while ($last != "" && mb_substr($cur,0,1) != $last) {
+		while ($last != "" && mb_substr($cur,0,1) != $last || mb_strlen($cur) != 4) {
 			echo "<非法输入，请重试！\n";
 			echo ">";
 			$cur = trim(fgets(STDIN));
