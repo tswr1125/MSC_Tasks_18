@@ -19,7 +19,7 @@ struct Matrix {
 		for (int i=0;i<n;i++) for (int j=0;j<m;j++) tmp.a[i][j] = a[i][j] + b.a[i][j];
 		return tmp;
 	}
-	Matrix operator - (const Matrix &b) {//矩阵剪法，需保证b.n==a.n 且 a.m == b.m
+	Matrix operator - (const Matrix &b) {//矩阵减法，需保证b.n==a.n 且 a.m == b.m
 		Matrix tmp = Matrix(n,m);
 		for (int i=0;i<n;i++) for (int j=0;j<m;j++) tmp.a[i][j] = a[i][j] - b.a[i][j];
 		return tmp;
@@ -53,6 +53,27 @@ struct Matrix {
 		}
 		return ans;
 	}
+	Matrix I() {//矩阵求逆，需确保n == m
+		Matrix tmp = Matrix(n,m);
+		double v = val();
+		for (int i=0;i<n;i++)
+			for (int j=0;j<m;j++) {
+				Matrix sub = Matrix(n-1,m-1);
+				int _x = 0;
+				for (int x=0;x<n;x++) {
+					if (x == i) continue;
+					int _y = 0;
+					for (int y=0;y<m;y++) {
+						if (y == j) continue;
+						sub.a[_x][_y] = a[x][y];
+						_y ++;
+					}
+					_x ++;
+				}
+				tmp.a[i][j] = (double)pow(-1,i+1+j+1) * sub.val() / v;
+			}
+		return tmp.T();
+	}
 	void input() {
 		scanf("%d%d",&n,&m);
 		for (int i=0;i<n;i++) for (int j=0;j<m;j++) scanf("%lf",&a[i][j]);
@@ -61,12 +82,12 @@ struct Matrix {
 		for (int i=0;i<n;i++) {
 			printf("|");
 			for (int j=0;j<n;j++) printf("\t%lf",a[i][j]);
-			printf("|\n");
+			printf("\t|\n");
 		}
 	}
 };
 void help() {
-	printf("Usage:\n\t1. 先输入一个操作类型：\n\t\t包含以下几类：\n\t\t1. T:矩阵转置\n\t\t2. A:矩阵加法\n\t\t3. S:矩阵减法\n\t\t4. M:矩阵乘法\n\t\t5. V:行列式求值\n\t2. 然后输入矩阵\n\t\t按照以下格式：\n\t\tn m\n\t\ta11\ta12\t...\ta1m\n\t\t...\t...\t...\t...\n\t\tan1\tan2\t...\tanm\n\t3. 若操作为A、D、M\n\t\t则再输入一个矩阵，与上面格式相同\n\n\t测试样例：\n\tM\n\n\t2 2\n\n\t1 2\n\t3 4\n\n\t2 2\n\n\t5 6\n\t7 8\n\n我真的不会矩阵除法，学长饶了我吧qwq\n");
+	printf("Usage:\n\t1. 先输入一个操作类型：\n\t\t包含以下几类：\n\t\t1. T:矩阵转置\n\t\t2. A:矩阵加法\n\t\t3. S:矩阵减法\n\t\t4. M:矩阵乘法\n\t\t5. V:行列式求值\n\t\t6. D:矩阵除法\n\t2. 然后输入矩阵\n\t\t按照以下格式：\n\t\tn m\n\t\ta11\ta12\t...\ta1m\n\t\t...\t...\t...\t...\n\t\tan1\tan2\t...\tanm\n\t3. 若操作为A、D、M\n\t\t则再输入一个矩阵，与上面格式相同\n\n\t测试样例：\n\tM\n\n\t2 2\n\n\t1 2\n\t3 4\n\n\t2 2\n\n\t5 6\n\t7 8\n\n");
 }
 int main() {
 	char o;
@@ -108,6 +129,19 @@ int main() {
 			else {
 				a = a * b;
 				a.print();
+			}
+			break;
+		case 'D':
+			a.input();
+			b.input();
+			if (b.n != b.m) perror("矩阵求逆需要行数和列数相等\n");
+			else {
+				b = b.I();
+				if (a.m != b.n) perror("第一个矩阵的列数必须等于第二个矩阵的行数\n");
+				else {
+					a = a * b;
+					a.print();
+				}
 			}
 			break;
 		default:
