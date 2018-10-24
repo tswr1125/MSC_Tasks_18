@@ -29,7 +29,7 @@
 	while (1) {
 		echo ">";
 		$cur = trim(fgets(STDIN));
-		while ($last != "" && mb_substr($cur,0,1) != $last || mb_strlen($cur) != 4) {
+		while ( ($last != "" && mb_substr($cur,0,1) != $last) || mb_strlen($cur) != 4) {
 			echo "<非法输入，请重试！\n";
 			echo ">";
 			$cur = trim(fgets(STDIN));
