@@ -1,0 +1,263 @@
+<!- 引用 Mathjax --!>
+
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+<script type = "text/javascript">
+    // 十进制转罗马数字
+    function toRoman(dec) {
+        var map = [[1, 'I', 'V'], [10, 'X', 'L'], [100, 'C', 'D'], [1000, 'M']];
+        if (dec < 1 || dec > 3999) {
+            return [false, "数字超出范围"];
+        }
+        ans = "";
+        for (var i = 3; i != -1; i--) {
+            var num = Math.floor(dec / map[i][0]);
+            if (num == 0) {
+                continue;
+            }
+            if (1 <= num && num <= 3) {
+                // I, II, III
+                ans += map[i][1].repeat(num);
+            } else if (num <= 5) {
+                // IV, V
+                ans += map[i][1].repeat(5 - num) + map[i][2];
+            } else if (num <= 8) {
+                // VI, VII, VIII
+                ans += map[i][2] + map[i][1].repeat(num - 5);
+            } else {
+                // IX, X
+                ans += map[i][1].repeat(10 - num) + map[i + 1][1];
+            }
+            dec -= num * map[i][0];
+        }
+        return [true, ans];
+    }
+    // 罗马数字转十进制
+    function toDecimal(rom) {
+        var map = {'I': 1, 'V': 5, 'X': 10, 'L': 50, 'C': 100, 'D': 500, 'M': 1000};
+        var max_num = 1, ans = 0;
+        for (var i = rom.length - 1; i != -1; i--) {
+            var chr = rom.charAt(i);
+            if (!(chr in map)) {
+                return [false, "罗马数字中不应该出现字符'" + chr + "'"];
+            }
+            var num = map[chr];
+            ans += (num < max_num ? -1 : 1) * num;
+            max_num = Math.max(max_num, num);
+        }
+        var correct = toRoman(ans);
+        if (!correct[0]) {
+            return correct;
+        }
+        if (rom != correct[1]) {
+            return [false, "格式错误，是不是应该是（" + correct[1] + "）？"];
+        }
+        return [true, ans];
+    }
+    // 从字符串解析矩阵，返回false代表解析失败
+    function parseMatrix(str) {
+        var mat = [];
+        $.each(str.trim().split(/\n+/), function (i, row) {
+            var error_flag = false;
+            mat[i] = [];
+            $.each(row.trim().split(/\s+/), function (j, val) {
+                error_flag |= isNaN(mat[i][j] = Number(val));
+            });
+            if (error_flag || mat[i].length != mat[0].length) {
+                return false;
+            }
+        });
+        return mat;
+    }
+    // 矩阵加法
+    function matPlus(mat1, mat2) {
+        if (mat1.length != mat2.length || mat1[0].length != mat2[0].length) {
+            return [false, "非同型矩阵之间不能进行加法"];
+        }
+        var res = [];
+        $.each(mat1, function (i, row) {
+            res[i] = [];
+            $.each(row, function (j, val) {
+                res[i][j] = val + mat2[i][j];
+            });
+        });
+        return [true, res];
+    }
+    function matMult(mat1, mat2) {
+        if (mat1[0].length != mat2.length) {
+            return [false, "左侧矩阵的列数必须等于右侧矩阵的行数"];
+        }
+        var res = [];
+        for (var i = 0; i < mat1.length; i++) {
+            res[i] = [];
+            for (var j = 0; j < mat2[0].length; j++) {
+                res[i][j] = 0;
+                for (var k = 0; k < mat2.length; k++) {
+                    res[i][j] += mat1[i][k] * mat2[k][j];
+                }
+            }
+        }
+        return [true, res];
+    }
+    // 将矩阵输出为LATEX字符串
+    function strMat(mat) {
+        var str = ' \\begin{pmatrix} ';
+        $.each(mat, function (i, val) {
+            str += (i == 0 ? ' ' : ' \\\\ ');
+            $.each(val, function (j, val) {
+                str += (j == 0 ? ' ' : ' & ');
+                str += val;
+            });
+        });
+        return str + ' \\end{pmatrix} ';
+    }
+    // 工具：跨站HTML访问
+    function xsGet(url, callback) {
+        $.ajax({
+            type: 'GET',
+            url: url,
+            success: callback
+        });
+    }
+    // 获得下一个成语
+    function nextWord(last, word, callback) {
+        if (last.length != 0 && (last.substr(-1) != word.charAt(0))) {
+            callback(false, "第一个字应该是 " + last.substr(-1), last);
+        }
+        var url = "https://chengyu.911cha.com/zi" + word.charCodeAt(0).toString(16) + "_1.html";
+        xsGet(url, function (html) {
+            if (!RegExp('<em>' + word.charAt(0) + '</em>' + word.substr(1)).test(html)) {
+                callback(false, "这不是个成语", last);
+            }
+            var code = word.charCodeAt(word.length - 1).toString(16);
+            xsGet("https://chengyu.911cha.com/zi" + code + "_1.html", function (html) {
+                var nxt = /<em>(.+?)<\/em>(.+?)</.exec(html);
+                var result = nxt[1] + nxt[2];
+                callback(true, (nxt == null ? "接不下去了……" : result), (nxt == null ? '' : result));
+            });
+        });
+    }
+    // 工具：设置提示框
+    function setResult(res, succ, msg) {
+        res.removeClass('alert-danger');
+        res.removeClass('alert-success');
+        res.addClass('alert-' + (succ ? 'success' : 'danger')); // 根据失败与否设置提示框风格
+        res.text(msg);
+    }
+    $(document).ready(function() {
+        // 跨站准备
+        $.ajaxPrefilter(function (options) {
+            if (options.crossDomain && jQuery.support.cors) {
+                var http = (window.location.protocol === 'http:' ? 'http:' : 'https:');
+                options.url = http + '//cors-anywhere.herokuapp.com/' + options.url;
+                // options.url = "http://cors.corsproxy.io/url=" + options.url;
+            }
+        });
+        $('#matError').hide();
+        $('#transRun').on('click', function () {
+            var src = $('#transSrc').val(), ans;
+            if (/^\d+$/.test(src)) {
+                ans = toRoman(src);
+            } else {
+                ans = toDecimal(src);
+            }
+            setResult($('#transResult'), ans[0], ans[1]);
+        });
+        $('#matRun').on('click', function () {
+            var err = $('#matError');
+            err.hide();
+            var mat1 = parseMatrix($('#matSrc1').val()), mat2 = parseMatrix($('#matSrc2').val());
+            if (mat1 == false || mat2 == false) {
+                return err.text("无法解析矩阵").show();
+            }
+            var oper = $('#matOper').val(), latex;
+            if (oper == '+') {
+                res = matPlus(mat1, mat2);
+                if (!res[0]) {
+                    return err.text(res[1]).show();
+                }
+                latex = strMat(mat1) + '+' + strMat(mat2) + '=' + strMat(res[1]);
+            } else if (oper == '*') {
+                res = matMult(mat1, mat2);
+                if (!res[0]) {
+                    return err.text(res[1]).show();
+                }
+                latex = strMat(mat1) + '\\times' + strMat(mat2) + '=' +  strMat(res[1]);
+            }
+            $('#matResult').text('\\[' + latex + '\\]');
+            MathJax.Hub.Queue(["Typeset", MathJax.Hub]); // 重绘LaTeX
+        });
+        var gameLast = '';
+        $('#gameRun').on('click', function () {
+            var btn = $('#gameRun');
+            btn.attr('disabled', true);
+            btn.text("...");
+            nextWord(gameLast, $('#gameSrc').val(), function (succ, ans, nlast) {
+                setResult($('#gameResult'), succ, ans);
+                gameLast = nlast;
+                btn.text("接！");
+                btn.attr('disabled', false);
+            });
+        });
+    });
+</script>
+
+<div class = "card pannel border-secondary mb-3">
+    <div class = "card-body">
+        <h3 class = "card-title">罗马数字 &amp; 十进制数字互转</h3>
+    </div>
+    <div class = "container form-group">
+        <div class = "form-inline">
+            <input type = "text" class = "form-control col-sm-11" id = "transSrc" placeholder = "罗马数字或者十进制数字"/>
+            <div class = "container-fluid col-sm-1 text-right">
+                <button id = "transRun" class = "btn btn-primary">转换</button>
+            </div>
+        </div>
+    </div>
+    <div class = "container">
+        <div id = "transResult" class = "alert" role = "alert"></div>
+    </div>
+</div>
+
+<div class = "card pannel border-secondary mb-3">
+    <div class = "card-body">
+        <h3 class = "card-title">矩阵计算</h3>
+        <p class = "card-text" id = "matResult"></p>
+    </div>
+    <div class = "container-fluid form-group">
+        <div class = "form-inline mb-1">
+            <textarea class = "form-control col-sm-5" id = "matSrc1" placeholder = "矩阵元素之间用空格分开" rows = "8"></textarea>
+            <div class = "container-fluid col-sm-1 text-center">
+                <select class = "form-control" id = "matOper">
+                    <option>+</option>
+                    <option>*</option>
+                </select>
+            </div>
+            <textarea class = "form-control col-sm-5" id = "matSrc2" placeholder = "矩阵元素之间用空格分开" rows = "8"></textarea>
+            <div class = "container-fluid col-sm-1 text-center">
+               <button id = "matRun" class = "btn btn-primary">&nbsp;=&nbsp;</button>
+            </div>
+        </div>
+    </div>
+    <div class = "container">
+        <div id = "matError" class = "alert alert-danger" role = "alert"></div>
+    </div>
+</div>
+
+<div class = "card pannel border-secondary mb-3">
+    <div class = "card-body">
+        <h3 class = "card-title">成语接龙</h3>
+    </div>
+    <div class = "container form-group">
+        <div class = "form-inline">
+            <input type = "text" class = "form-control col-sm-11" id = "gameSrc"/>
+            <div class = "container-fluid col-sm-1 text-right">
+                <button id = "gameRun" class = "btn btn-primary">接！</button>
+            </div>
+        </div>
+    </div>
+    <div class = "container">
+        <div id = "gameResult" class = "alert" role = "alert"></div>
+    </div>
+</div>
+
